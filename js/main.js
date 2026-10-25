@@ -1,4 +1,4 @@
-// Elsie's Ring Studio: state, controls, photo placement and wiring to the engine.
+// Nat's Ring Studio: state, controls, photo placement and wiring to the engine.
 
 import { Engine } from './engine.js';
 import {
@@ -11,6 +11,7 @@ import { METALS, FINISHES, createMetalMaterial } from './metals.js';
 import { LIGHT_PRESETS, kelvinToLinear } from './lighting.js';
 import { US_SIZES, formatUS, sizeSummary, diameterFromUS } from './sizes.js';
 import { Panel, el, getPath, setPath } from './ui.js';
+import { detectRingFinger, loadHandLandmarker } from './handDetect.js';
 
 // ---------------------------------------------------------------------------
 // State
@@ -33,7 +34,7 @@ const DEFAULTS = {
   band: { size: 6, width: 2.0, thickness: 1.6, profile: 'domed', shank: 'plain', accent: 'none', accentScale: 1, milgrain: false, metal: 'platinum', finish: 'polished' },
   wedding: { style: 'none', width: 2.0, metal: 'match' },
   light: { preset: 'studio', azimuth: 0, elevation: 0, exposure: 0, kelvin: 5500, bloom: 0.35, glints: 0, shadow: 0.45, quality: 'balanced', rock: false, backdrop: 'light' },
-  photo: { pitch: 0, roll: 0, slide: 0, together: false, snap: true, match: true, softness: 0.6, grain: 0.15, photoMix: 0.4, warmth: 0 },
+  photo: { pitch: 0, roll: 0, slide: 0, together: false, snap: true, match: true, autoLight: true, softness: 0.6, grain: 0.15, photoMix: 0.4, warmth: 0 },
 };
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -66,7 +67,7 @@ function persist() {
 
 const $ = (s) => document.querySelector(s);
 let photo = null; // { canvas, w, h, gray, gw, gh, avgLinear, match }
-const placement = { step: 0, a: null, b: null, flip: false };
+const placement = { step: 0, a: null, b: null, flip: false, fz: 0, up: null, auto: false };
 const stage = $('#stage');
 const canvas = $('#view');
 let engine;
@@ -284,6 +285,7 @@ function onChange(path, value) {
   if (path === 'photo.together') { engine.setFingersTogether(value); }
   if (root === 'photo' && ['pitch', 'roll', 'slide'].includes(key)) { updatePlacement(); persist(); return; }
   if (path === 'photo.photoMix') { engine.setPhotoMix(value); }
+  if (path === 'photo.autoLight' && value && photo && photo.light) { applyPhotoLight(photo.light); panel.refresh(); return; }
   if (path === 'photo.snap' && value && placement.a && placement.b) { snapHandles(); updatePlacement(); }
 
   if (root === 'stone' || root === 'setting' || root === 'band' || root === 'wedding') schedule('ring');
@@ -447,18 +449,19 @@ const schema = [
   {
     id: 'photo', label: 'Photo', groups: [
       { title: 'Hand photo', controls: [
-        { type: 'buttons', items: [['Add hand photo', () => fileInput.click(), 'primary'], ['Place the ring again', () => startPlacement(), 'ghost', () => !photo]] },
+        { type: 'buttons', items: [['Add hand photo', () => fileInput.click(), 'primary'], ['Find the finger again', () => { startPlacement(); autoPlace(); }, 'ghost', () => !photo], ['Place it by hand', () => startPlacement(), 'ghost', () => !photo]] },
         { type: 'info', render: () => photoTips() },
       ] },
       { title: 'Fit to the finger', when: (s) => !!photo && placement.step === 2, controls: [
-        { type: 'slider', path: 'photo.pitch', label: 'Finger tilt', min: -60, max: 60, step: 1, format: (v) => (v === 0 ? 'Flat to the camera' : v > 0 ? `Tip toward camera ${v}°` : `Tip away ${-v}°`) },
-        { type: 'slider', path: 'photo.roll', label: 'Finger turn', min: -80, max: 80, step: 1, format: (v) => (v === 0 ? 'Facing the camera' : `${v > 0 ? 'Turned right' : 'Turned left'} ${Math.abs(v)}°`) },
+        { type: 'slider', path: 'photo.pitch', label: 'Finger tilt', min: -60, max: 60, step: 1, format: (v) => (v === 0 ? (placement.auto ? 'As detected' : 'Flat to the camera') : v > 0 ? `Tip toward camera ${v}°` : `Tip away ${-v}°`) },
+        { type: 'slider', path: 'photo.roll', label: 'Finger turn', min: -80, max: 80, step: 1, format: (v) => (v === 0 ? (placement.auto ? 'As detected' : 'Facing the camera') : `${v > 0 ? 'Turned right' : 'Turned left'} ${Math.abs(v)}°`) },
         { type: 'slider', path: 'photo.slide', label: 'Along the finger', min: -8, max: 8, step: 0.1, format: (v) => (v === 0 ? 'Where you tapped' : `${v > 0 ? 'Toward fingertip' : 'Toward hand'} ${Math.abs(v).toFixed(1)} mm`) },
         { type: 'toggle', path: 'photo.together', label: 'Fingers touching (hides the sides of the band)' },
         { type: 'toggle', path: 'photo.snap', label: 'Snap the guides to finger edges' },
       ] },
       { title: 'Blend with the photo', when: (s) => !!photo, controls: [
         { type: 'toggle', path: 'photo.match', label: 'Match the photo’s colour and brightness' },
+        { type: 'toggle', path: 'photo.autoLight', label: 'Light the ring from the photo’s light direction' },
         { type: 'slider', path: 'photo.warmth', label: 'Warmth', min: -1, max: 1, step: 0.01, format: (v) => (Math.abs(v) < 0.02 ? 'Neutral' : v > 0 ? `Warmer ${Math.round(v * 100)}` : `Cooler ${Math.round(-v * 100)}`) },
         { type: 'slider', path: 'photo.softness', label: 'Softness', min: 0, max: 3, step: 0.05, format: (v) => `${v.toFixed(2)} px` },
         { type: 'slider', path: 'photo.grain', label: 'Grain', min: 0, max: 1, step: 0.01, format: (v) => `${Math.round(v * 100)}%` },
@@ -642,6 +645,61 @@ async function loadPhoto(file) {
   $('#add-photo').textContent = 'Replace photo';
   startPlacement();
   setMode('hand');
+  autoPlace();
+}
+
+// Find the hand, put the ring on the ring finger and light it like the photo.
+// Falls back to tapping the finger edges when no hand is found.
+async function autoPlace() {
+  if (!photo) return;
+  const mine = photo;
+  hint.textContent = 'Finding the ring finger…';
+  hint.hidden = false;
+  let found = null;
+  try { found = await detectRingFinger(photo); } catch (e) { console.warn('hand detection failed', e); }
+  if (photo !== mine) return; // a newer photo arrived
+  if (!found) {
+    placement.auto = false;
+    updateHint();
+    toast('No hand found automatically. Tap the two edges of the ring finger instead.');
+    return;
+  }
+  placement.a = found.a; placement.b = found.b; placement.step = 2;
+  placement.fz = found.fz; placement.up = found.up; placement.auto = true;
+  placement.flip = false;
+  const [dx, dy] = fingertipDir();
+  if (dx * found.tip[0] + dy * found.tip[1] < 0) placement.flip = true;
+  state.photo.pitch = 0; state.photo.roll = 0; state.photo.slide = 0;
+  if (state.photo.autoLight) applyPhotoLight(found.light);
+  showGuides = false;
+  $('#toggle-guides')?.setAttribute('aria-pressed', 'false');
+  updatePlacement();
+  updateHint();
+  panel.refresh();
+  // frame the ring
+  const cx = (found.a[0] + found.b[0]) / 2 / photo.w, cy = (found.a[1] + found.b[1]) / 2 / photo.h;
+  const z = Math.min(2.2, Math.max(1, (photo.w / Math.hypot(found.b[0] - found.a[0], found.b[1] - found.a[1])) / 7));
+  engine.setView(z, cx, cy);
+  toast('Ring placed on the ring finger. Turn on Guides to fine-tune.');
+}
+
+// light the ring from where the photo's light comes from
+function applyPhotoLight(est) {
+  if (!est) return;
+  const l = state.light;
+  l.preset = 'match';
+  l.kelvin = LIGHT_PRESETS.match.kelvin;
+  if (est.strength < 0.15) {
+    // soft, even light: keep the light box overhead and the shadow faint
+    l.azimuth = 0; l.elevation = 10; l.shadow = 0.25;
+  } else {
+    // the stronger the shading across the fingers, the lower and harder the light
+    l.azimuth = est.azimuth;
+    l.elevation = -Math.round(Math.min(30, (est.strength - 0.15) * 70));
+    l.shadow = Math.round(Math.min(0.75, 0.3 + (est.strength - 0.15) * 0.9) * 100) / 100;
+  }
+  photo.light = est;
+  applyLighting();
 }
 
 // ---------------------------------------------------------------------------
@@ -654,6 +712,7 @@ let showGuides = true;
 function startPlacement() {
   if (!photo) { fileInput.click(); return; }
   placement.step = 0; placement.a = null; placement.b = null; placement.flip = false;
+  placement.fz = 0; placement.up = null; placement.auto = false;
   engine.ringVisible = false;
   showGuides = true;
   engine.setView(1, 0.5, 0.5);
@@ -684,6 +743,7 @@ function updatePlacement() {
   engine.setPlacement({
     cx: (a[0] + b[0]) / 2, cy: (a[1] + b[1]) / 2, widthPx: Math.hypot(b[0] - a[0], b[1] - a[1]),
     dirX: dx, dirY: dy, pitch: state.photo.pitch, roll: state.photo.roll, slide: state.photo.slide,
+    fz: placement.fz, up: placement.up,
   });
   sampleSkin();
   drawGuides();
@@ -1085,7 +1145,7 @@ window.__app = {
     snapHandles(); updatePlacement(); updateHint(); drawGuides(); panel.refresh();
     return [placement.a, placement.b];
   },
-  get photo() { return photo ? { w: photo.w, h: photo.h, match: photo.match } : null; },
+  get photo() { return photo ? { w: photo.w, h: photo.h, match: photo.match, light: photo.light } : null; },
   get placement() { return placement; },
   get current() { return current && { stats: current.built.stats, prongR: current.prongR }; },
   loadFile: loadPhoto,

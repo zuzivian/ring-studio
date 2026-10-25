@@ -312,12 +312,19 @@ export class Environment {
   setRotation(azimuthDeg, elevationDeg) {
     this.azimuth = azimuthDeg;
     this.elevation = elevationDeg;
-    const e = new THREE.Euler(THREE.MathUtils.degToRad(-elevationDeg), 0, THREE.MathUtils.degToRad(-azimuthDeg), 'ZXY');
-    const q = new THREE.Quaternion().setFromEuler(e);
+    let q;
     if (this.frame === 'hand') {
+      // on a photo: azimuth turns the light around the view axis (clockwise
+      // from the top of the photo), elevation tips it toward the camera
+      // (positive) or down to a raking angle across the hand (negative)
       const toHand = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI)
         .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2));
-      q.premultiply(toHand);
+      const tilt = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(elevationDeg));
+      const turn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), THREE.MathUtils.degToRad(-azimuthDeg));
+      q = turn.multiply(tilt).multiply(toHand);
+    } else {
+      const e = new THREE.Euler(THREE.MathUtils.degToRad(-elevationDeg), 0, THREE.MathUtils.degToRad(-azimuthDeg), 'ZXY');
+      q = new THREE.Quaternion().setFromEuler(e);
     }
     this.group.quaternion.copy(q);
     this.group.updateMatrixWorld(true);

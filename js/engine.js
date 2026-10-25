@@ -488,11 +488,19 @@ export class Engine {
       const p = this.placement;
       const k = this.pxPerMm();
       const { width: iw, height: ih } = this.photoInfo;
-      const F = new THREE.Vector3(p.dirX, -p.dirY, 0).normalize();
+      // fingertip direction: in the photo plane, tipped toward or away from
+      // the camera by the detected 3D finger direction (fz)
+      const fz = p.fz || 0;
+      const c = Math.sqrt(1 - fz * fz);
+      const F = new THREE.Vector3(p.dirX * c, -p.dirY * c, fz).normalize();
       const centre = new THREE.Vector3((p.cx - iw / 2) / k, -(p.cy - ih / 2) / k, 0).addScaledVector(F, p.slide || 0);
-      const Y = new THREE.Vector3(0, 0, 1);
+      // top of the ring: the back of the finger (detected) or straight at the camera
+      const Y = p.up ? new THREE.Vector3(...p.up) : new THREE.Vector3(0, 0, 1);
+      Y.addScaledVector(F, -Y.dot(F)).normalize();
+      if (Y.lengthSq() < 0.5) Y.set(0, 0, 1);
       const Z = F.clone().negate();
-      const X = new THREE.Vector3().crossVectors(Y, Z);
+      const X = new THREE.Vector3().crossVectors(Y, Z).normalize();
+      Y.crossVectors(Z, X);
       const q0 = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, Z));
       const qp = new THREE.Quaternion().setFromAxisAngle(X, THREE.MathUtils.degToRad(p.pitch || 0));
       const F2 = F.clone().applyQuaternion(qp);

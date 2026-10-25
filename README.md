@@ -1,6 +1,6 @@
-# Elsie's Ring Studio
+# Nat's Ring Studio
 
-A browser app for trying engagement rings on a photo of a hand. Upload the photo, tap the two edges of the ring finger, and the ring is drawn to scale from the ring size you pick. Every part of the ring is adjustable and the stone is rendered by tracing light through its real facets.
+A browser app for trying engagement rings on a photo of a hand. Upload the photo and the app finds the ring finger (MediaPipe hand landmarks), sizes the ring from the ring size you pick, tilts it with the finger in 3D and lights it from the photo's own light direction. You can still drag the finger-edge guides or place it by hand. Every part of the ring is adjustable and the stone is rendered by tracing light through its real facets.
 
 No build step, no server, no upload: open `index.html` from any static host. The photo never leaves the browser.
 
@@ -20,7 +20,7 @@ No build step, no server, no upload: open `index.html` from any static host. The
 
 **Light**: ten environments (jeweller's light tent, dark studio, window daylight, overcast, direct sun, office, candlelight, golden hour, spotlights, table lamp, soft room light matched to the photo), light direction, height, colour temperature, exposure, highlight glow, star glints, shadow strength, and a gentle rock to watch the sparkle.
 
-**Photo**: finger tilt and turn, slide along the finger, fingers-together occlusion, edge snapping for the guides, colour and brightness matching, softness, grain, and how much of the photo appears in the stone's reflections. Pinch or scroll to zoom. Save a full-resolution PNG of the composite.
+**Photo**: automatic finger detection (MediaPipe hand landmarker, loaded from jsDelivr and Google's model host; falls back to tapping the finger edges), light direction read from the skin shading, finger tilt and turn offsets, slide along the finger, fingers-together occlusion, edge snapping for the guides, colour and brightness matching, softness, grain, and how much of the photo appears in the stone's reflections. Pinch or scroll to zoom. Save a full-resolution PNG of the composite.
 
 ## How it works
 
