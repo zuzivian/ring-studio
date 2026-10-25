@@ -3,8 +3,8 @@
 // back of the hand faces, and read the light direction off the skin shading.
 //
 // MediaPipe landmarks: 0 wrist; 5/9/13/17 index/middle/ring/pinky knuckles
-// (MCP); 14 ring finger middle joint (PIP). worldLandmarks are metres around
-// the hand centre with x right, y down, z away from the camera.
+// (MCP); 14 ring finger middle joint (PIP). Image landmarks are normalised
+// x, y with z a relative depth (smaller = nearer the camera).
 
 const MP_VERSION = '0.10.14';
 const MP_BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}`;
@@ -61,10 +61,7 @@ export async function detectRingFinger(photo) {
     if (area > bestArea) { bestArea = area; best = i; }
   });
   const L = res.landmarks[best];
-  const Wl = (res.worldLandmarks && res.worldLandmarks[best]) || L.map((p) => ({ x: p.x, y: p.y * (photo.h / photo.w), z: p.z }));
   const P = L.map((p) => [p.x * photo.w, p.y * photo.h]);
-  // world landmarks in the app's frame: x right, y up, z toward the camera
-  const Wp = Wl.map((p) => [p.x, -p.y, -p.z]);
 
   // ring position and in-image fingertip direction
   const m = P[13], j = P[14];
@@ -84,16 +81,25 @@ export async function detectRingFinger(photo) {
   const a = [cc[0] - px * w / 2, cc[1] - py * w / 2];
   const b = [cc[0] + px * w / 2, cc[1] + py * w / 2];
 
-  // 3D: how steeply the finger points toward or away from the camera, and which way its back faces
-  const F3 = norm(sub(Wp[14], Wp[13]));
-  const fz = Math.max(-0.85, Math.min(0.85, F3[2]));
-  const across = norm(sub(Wp[17], Wp[9]));
+  // 3D: how steeply the finger points toward or away from the camera, and
+  // which way its back faces. Built from the image landmarks (x, y in pixels,
+  // z = MediaPipe's relative depth on the same scale as x), so the frame lines
+  // up with the photo by construction. MediaPipe's depth is noisy, so the
+  // result is damped and kept within 45° of facing the camera; the tilt and
+  // turn sliders cover the rest.
+  const I = L.map((p) => [p.x * photo.w, -p.y * photo.h, -p.z * photo.w]);
+  const F3 = norm(sub(I[14], I[13]));
+  const fz = Math.max(-0.5, Math.min(0.5, F3[2] * 0.7));
+  const across = norm(sub(I[17], I[9]));
   let up = norm(cross(across, F3));
   if (up[2] < 0) up = up.map((v) => -v); // the back of the hand faces the camera
-  // blend in the whole hand's normal for stability
-  let hand = norm(cross(sub(Wp[5], Wp[0]), sub(Wp[17], Wp[0])));
+  let hand = norm(cross(sub(I[5], I[0]), sub(I[17], I[0])));
   if (hand[2] < 0) hand = hand.map((v) => -v);
-  up = norm(up.map((v, i) => v * 0.6 + hand[i] * 0.4));
+  up = norm(up.map((v, i) => v * 0.5 + hand[i] * 0.5));
+  // damp toward the camera and cap the lean at 45°
+  up = norm([up[0] * 0.6, up[1] * 0.6, up[2]]);
+  const lean = Math.hypot(up[0], up[1]);
+  if (lean > Math.SQRT1_2) { const k = Math.SQRT1_2 / lean; up = norm([up[0] * k, up[1] * k, Math.SQRT1_2]); }
 
   return {
     a, b, tip: [tx, ty], fz, up,
