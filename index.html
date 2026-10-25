@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Elsie's Ring Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Preview engagement rings on a photo of a hand: every diamond shape, setting, metal, carat and ring size, rendered with real light.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&family=Marcellus&display=swap">
+<link rel="stylesheet" href="css/app.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="19" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11.5 7.5 16 3l4.5 4.5L16 11.6z" fill="currentColor"/></svg>
+      <h1>Elsie's Ring Studio</h1>
+    </div>
+    <div class="modes" role="group" aria-label="View">
+      <button type="button" data-mode="studio" aria-pressed="true">The ring</button>
+      <button type="button" data-mode="hand" aria-pressed="false">On the hand</button>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn ghost" id="add-photo">Add hand photo</button>
+      <button type="button" class="btn primary" id="save">Save image</button>
+    </div>
+    <input type="file" id="file" accept="image/*" hidden>
+  </header>
+
+  <main class="workspace">
+    <section class="stage" id="stage" aria-label="Ring preview">
+      <canvas id="view" role="img" aria-label="Rendered ring preview"></canvas>
+      <svg id="guides" class="guides" role="group" aria-label="Placement guides"></svg>
+      <p class="hint" id="hint" role="status" hidden></p>
+      <canvas id="loupe" class="loupe" width="150" height="150" hidden aria-hidden="true"></canvas>
+      <div class="stage-tools" id="stage-tools" hidden>
+        <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+        <button type="button" id="zoom-ring" aria-label="Zoom to the ring">Ring</button>
+        <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+        <button type="button" id="toggle-guides" aria-pressed="true" aria-label="Show guides">Guides</button>
+      </div>
+      <div class="empty-hand" id="empty-hand" hidden>
+        <h2>See it on a real hand</h2>
+        <p>Add a photo of the hand. Tap the two edges of the ring finger and the ring is drawn to scale, from the ring size you choose.</p>
+        <button type="button" class="btn primary" id="empty-add">Add a hand photo</button>
+        <ul>
+          <li>Back of the hand toward the camera, fingers flat.</li>
+          <li>Soft daylight, no flash.</li>
+          <li>Phone about 30 cm from the hand.</li>
+        </ul>
+        <p class="fine">The photo stays in this browser. Nothing is uploaded.</p>
+      </div>
+      <p class="stage-message" id="stage-message" hidden></p>
+      <div class="drop-note" aria-hidden="true">Drop the photo</div>
+    </section>
+
+    <section class="report" id="report" aria-label="Ring summary"></section>
+
+    <aside class="panel" aria-label="Ring options">
+      <div class="starts-wrap">
+        <h2 class="panel-heading" id="starts-title">Start from</h2>
+        <div class="starts" id="starts" role="group" aria-labelledby="starts-title"></div>
+      </div>
+      <div id="panel-controls"></div>
+      <section class="looks-wrap" aria-labelledby="looks-title">
+        <div class="looks-head">
+          <h2 class="panel-heading" id="looks-title">Saved looks</h2>
+          <button type="button" class="btn ghost small" id="save-look">Save this look</button>
+        </div>
+        <p class="group-hint" id="looks-empty">Save a few designs to compare them side by side. They stay in this browser.</p>
+        <div class="looks" id="looks"></div>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+<div class="preview" id="preview" role="dialog" aria-modal="true" aria-label="Saved image" hidden>
+  <div class="preview-card">
+    <img alt="The rendered ring preview">
+    <p>Press and hold (or right-click) the image to save it.</p>
+    <button type="button" class="btn primary">Done</button>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
