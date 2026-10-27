@@ -487,7 +487,9 @@ export function buildRing(spec) {
     const ygA = bandTop0 + clearance + cGem.pavilionDepth * cS + (cGem.girdle / 2) * cS;
     const ygB = bandTop0 + clearance + sec.gem.pavilionDepth * sec.scale + (sec.gem.girdle / 2) * sec.scale;
     const tilt = 0.55;
-    const dx = (cHalf.x * Math.cos(tilt) + cHalf.z * Math.sin(tilt) + bHalf.x * Math.cos(tilt) + bHalf.z * Math.sin(tilt)) / 2 + gap / 2;
+    // rotated bounding boxes overstate the footprint of rounded stones, so the
+    // pair would sit apart; pull them in until the girdles nearly meet
+    const dx = ((cHalf.x * Math.cos(tilt) + cHalf.z * Math.sin(tilt) + bHalf.x * Math.cos(tilt) + bHalf.z * Math.sin(tilt)) / 2) * 0.92 + gap / 2;
     const zo = Math.max(cHalf.z, bHalf.z) * 0.35;
     placeStone(cGem, cS, centre.yaw + tilt, -dx / ygA, -zo, ygA, 'center', head.prongs);
     placeStone(sec.gem, sec.scale, sec.yaw - tilt, dx / ygB, zo, ygB, 'center', 'auto');
@@ -739,12 +741,16 @@ export function buildRing(spec) {
         if (band.accent === 'channel') {
           // metal walls either side of the stones
           for (const sgn of [-1, 1]) {
+            const a0 = lo, a1 = full ? Math.PI : hi;
             const wall = (phi) => {
               const top = row.top(phi);
               const z = row.z(phi) + sgn * (d / 2 + 0.13);
-              return [[top - 0.35, z - 0.13], [top + d * 0.17, z - 0.13], [top + d * 0.2, z], [top + d * 0.17, z + 0.13], [top - 0.35, z + 0.13]];
+              // walls rise out of the band and sink back in at their ends
+              const a = Math.abs(phi);
+              const ramp = full && a1 === Math.PI ? smooth(a0, a0 + 0.12, a) : smooth(a0, a0 + 0.12, a) * smooth(a1, a1 - 0.12, a);
+              const h = -0.35 + (d * 0.2 + 0.35) * ramp;
+              return [[top - 0.35, z - 0.13], [top + h - d * 0.03, z - 0.13], [top + h, z], [top + h - d * 0.03, z + 0.13], [top - 0.35, z + 0.13]];
             };
-            const a0 = lo, a1 = full ? Math.PI : hi;
             bandParts.push(sweepAroundAxis(side > 0 ? a0 : -a1, side > 0 ? a1 : -a0, 80, wall, { caps: true }));
           }
         }

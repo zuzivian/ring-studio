@@ -16,7 +16,7 @@ No build step, no server, no upload: open `index.html` from any static host. The
 
 **Setting**: solitaire, cathedral, hidden halo, halo, double halo, bezel, half bezel, three-stone, five-stone, toi et moi, tension. Prong count and tip style (V-tips appear on points and corners automatically), prong thickness, basket, height above the finger, halo stone size and gap, milgrain, side-stone shape and weight, head metal.
 
-**Band**: ring size in US with UK/EU/Japan conversions (the inner diameter sets the photo scale), width, thickness, profile (domed, half-round, flat, comfort, knife-edge, square), shank (plain, tapered, split, twisted), pavé / double pavé / channel / eternity stones, milgrain, 16 metals (platinum, white/yellow/rose/green gold in several karats, palladium, silver, titanium, tungsten, black rhodium), four finishes, and a stacked wedding band (plain, pavé, eternity or curved).
+**Band**: ring size in US with UK/EU/Japan conversions (the inner diameter sets the photo scale), width, thickness, profile (domed, half-round, flat, comfort, knife-edge, square), shank (plain, tapered, split, twisted), pavé / double pavé / channel / eternity stones, milgrain, 17 metals (platinum, white/yellow/rose/champagne/green gold in several karats, palladium, silver, titanium, tungsten, black rhodium), four finishes, and a stacked wedding band (plain, pavé, eternity or curved).
 
 **Light**: ten environments (jeweller's light tent, dark studio, window daylight, overcast, direct sun, office, candlelight, golden hour, spotlights, table lamp, soft room light matched to the photo), light direction, height, colour temperature, exposure, highlight glow, star glints, shadow strength, and a gentle rock to watch the sparkle.
 
@@ -30,6 +30,10 @@ No build step, no server, no upload: open `index.html` from any static host. The
 - `js/lighting.js` defines the environments as emissive panels and sky gradients; `js/metals.js` holds measured metal reflectances.
 - `js/engine.js` renders in passes (reflection cubes → ring → photo with contact shadow → composite with tone mapping, bloom and film match) using three.js r170 from jsDelivr.
 - `js/main.js` and `js/ui.js` hold the state, the control schema and the placement interaction.
+
+## Self-hosting hand detection
+
+By default the hand landmarker loads from jsDelivr and Google's model host. To serve it from this site instead (faster, and it works on networks that block those hosts), run `scripts/fetch-mediapipe.sh` once from the repo root and commit `vendor/mediapipe/` (about 25 MB). The app uses the local copy whenever it is present.
 
 ## Running locally
 

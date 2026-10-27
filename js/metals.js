@@ -15,6 +15,7 @@ export const METALS = {
   yellowGold18: { label: '18k yellow gold', f0: [0.96, 0.74, 0.37], rough: 0.06 },
   yellowGold14: { label: '14k yellow gold', f0: [0.92, 0.73, 0.44], rough: 0.06 },
   yellowGold10: { label: '10k yellow gold', f0: [0.88, 0.73, 0.52], rough: 0.07 },
+  champagneGold18: { label: '18k champagne gold', f0: [0.93, 0.8, 0.63], rough: 0.06 },
   roseGold18: { label: '18k rose gold', f0: [0.96, 0.67, 0.55], rough: 0.06 },
   roseGold14: { label: '14k rose gold', f0: [0.95, 0.65, 0.56], rough: 0.06 },
   greenGold: { label: '18k green gold', f0: [0.86, 0.81, 0.5], rough: 0.06 },

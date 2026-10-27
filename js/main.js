@@ -34,6 +34,7 @@ const DEFAULTS = {
   band: { size: 6, width: 2.0, thickness: 1.6, profile: 'domed', shank: 'plain', accent: 'none', accentScale: 1, milgrain: false, metal: 'platinum', finish: 'polished' },
   wedding: { style: 'none', width: 2.0, metal: 'match' },
   light: { preset: 'studio', azimuth: 0, elevation: 0, exposure: 0, kelvin: 5500, bloom: 0.22, glints: 0, shadow: 0.45, quality: 'balanced', rock: false, backdrop: 'light' },
+  ui: { simple: true },
   photo: { pitch: 0, roll: 0, slide: 0, together: false, snap: true, match: true, autoLight: true, softness: 0.4, grain: 0.15, photoMix: 0.25, warmth: 0 },
 };
 
@@ -306,7 +307,7 @@ const fmtMm = (v) => `${v.toFixed(1)} mm`;
 const shapeOptions = (filter) => Object.entries(CUTS).filter(([k, d]) => (filter ? filter(k, d) : !d.sideOnly)).map(([k, d]) => [k, d.label, outlineSvgPath(k)]);
 const metalSwatch = {
   platinum: '#c9c8c4', whiteGold18: '#e3e2de', whiteGold14: '#e0dfdb', whiteGoldRaw: '#dcd3c2', yellowGold22: '#efc66c', yellowGold18: '#e9c47c', yellowGold14: '#e1c18a',
-  yellowGold10: '#d9bd92', roseGold18: '#e9b39f', roseGold14: '#e6ad99', greenGold: '#d6cd8e', palladium: '#d0ccc6', silver: '#ecebe6', titanium: '#a9a49e', tungsten: '#8f8d8a', blackRhodium: '#3a3a3c',
+  yellowGold10: '#d9bd92', champagneGold18: '#e3cba4', roseGold18: '#e9b39f', roseGold14: '#e6ad99', greenGold: '#d6cd8e', palladium: '#d0ccc6', silver: '#ecebe6', titanium: '#a9a49e', tungsten: '#8f8d8a', blackRhodium: '#3a3a3c',
 };
 const metalOptions = (withMatch) => (withMatch ? [['match', 'Same as band', 'conic-gradient(#e9c47c 0 50%, #e3e2de 0)']] : []).concat(Object.entries(METALS).map(([k, m]) => [k, m.label, metalSwatch[k]]));
 const stoneTypeOptions = () => [
@@ -331,9 +332,9 @@ const schema = [
       ] },
       { title: 'Shape', controls: [
         { type: 'shapes', path: 'stone.shape', label: 'Shape', options: () => shapeOptions() },
-        { type: 'slider', path: 'stone.ratio', label: 'Length to width', when: (s) => hasRatio(s.stone.shape), min: (s) => CUTS[s.stone.shape].ratio[0], max: (s) => CUTS[s.stone.shape].ratio[2], step: 0.01, format: (v) => `${v.toFixed(2)} : 1` },
-        { type: 'segmented', path: 'stone.orientation', label: 'Direction', when: (s) => !['round', 'oldEuropean'].includes(s.stone.shape), options: [['ns', 'North–south'], ['ew', 'East–west']] },
-        { type: 'toggle', path: 'stone.flip', label: 'Point the other way', when: (s) => ['pear', 'heart', 'trillion'].includes(s.stone.shape) },
+        { adv: true, type: 'slider', path: 'stone.ratio', label: 'Length to width', when: (s) => hasRatio(s.stone.shape), min: (s) => CUTS[s.stone.shape].ratio[0], max: (s) => CUTS[s.stone.shape].ratio[2], step: 0.01, format: (v) => `${v.toFixed(2)} : 1` },
+        { adv: true, type: 'segmented', path: 'stone.orientation', label: 'Direction', when: (s) => !['round', 'oldEuropean'].includes(s.stone.shape), options: [['ns', 'North–south'], ['ew', 'East–west']] },
+        { adv: true, type: 'toggle', path: 'stone.flip', label: 'Point the other way', when: (s) => ['pear', 'heart', 'trillion'].includes(s.stone.shape) },
       ] },
       { title: 'Carat weight', controls: [
         { type: 'slider', path: 'stone.carat', label: 'Carat', min: Math.sqrt(0.2), max: Math.sqrt(8), step: 0.001, map: { to: (v) => Math.sqrt(v), from: (x) => Math.round(x * x * 100) / 100 }, format: (v) => `${v.toFixed(2)} ct` },
@@ -346,13 +347,13 @@ const schema = [
       ] },
       { title: 'Colour', when: (s) => kind(s) === 'colored', controls: [
         { type: 'select', path: 'stone.variety', label: 'Variety', options: (s) => Object.entries(VARIETIES[GEM_TYPES[s.stone.type].varieties]).map(([k, v]) => [k, v.label]), note: (s) => (GEM_TYPES[s.stone.type].varieties === 'alexandrite' ? 'Turns green in daylight and raspberry under warm light. Try the Light tab.' : '') },
-        { type: 'slider', path: 'stone.tone', label: 'Tone', min: 0.35, max: 2.2, step: 0.01, format: (v) => (v < 0.8 ? 'Lighter' : v > 1.25 ? 'Deeper' : 'Medium') },
+        { adv: true, type: 'slider', path: 'stone.tone', label: 'Tone', min: 0.35, max: 2.2, step: 0.01, format: (v) => (v < 0.8 ? 'Lighter' : v > 1.25 ? 'Deeper' : 'Medium') },
       ] },
       { title: 'Clarity', when: (s) => kind(s) !== 'opaque', controls: [
         { type: 'scale', path: 'stone.clarity', label: 'Clarity grade', options: Object.keys(CLARITY).map((k) => [k, k]), bands: [['Flawless', 2], ['Very very slight', 2], ['Very slight', 2], ['Slight', 2], ['Included', 3]],
           note: (s) => (['SI2', 'I1', 'I2', 'I3'].includes(s.stone.clarity) ? 'Inclusions at this grade can show on the hand. Zoom in on the stone to look.' : 'Eye clean: inclusions at this grade need a loupe to see.') },
       ] },
-      { title: 'Cut', when: (s) => isBrilliant(s.stone.shape), controls: [
+      { adv: true, title: 'Cut', when: (s) => isBrilliant(s.stone.shape), controls: [
         { type: 'select', path: 'stone.cut', label: 'Cut grade', when: (s) => !s.stone.custom, options: Object.entries(CUT_GRADES).map(([k, g]) => [k, g.label]),
           note: (s) => ({ fairShallow: 'A shallow pavilion leaks light: look for a glassy "window" in the middle.', poorDeep: 'A deep pavilion sends light out the sides: the centre goes dark.' })[s.stone.cut] || '' },
         { type: 'toggle', path: 'stone.custom', label: 'Set proportions by hand' },
@@ -361,7 +362,7 @@ const schema = [
         { type: 'slider', path: 'stone.pavilionAngle', label: 'Pavilion angle', when: (s) => s.stone.custom, min: 37, max: 50, step: 0.05, format: (v) => `${v.toFixed(2)}°` },
         { type: 'slider', path: 'stone.girdle', label: 'Girdle', when: (s) => s.stone.custom, min: 1, max: 7, step: 0.1, format: (v) => `${v.toFixed(1)}%` },
       ] },
-      { title: 'Fluorescence', when: (s) => kind(s) === 'diamond' && s.stone.fancy === 'none', hint: 'Blue glow under ultraviolet light, which daylight contains. Indoors it barely shows.', controls: [
+      { adv: true, title: 'Fluorescence', when: (s) => kind(s) === 'diamond' && s.stone.fancy === 'none', hint: 'Blue glow under ultraviolet light, which daylight contains. Indoors it barely shows.', controls: [
         { type: 'segmented', path: 'stone.fluorescence', label: 'Strength', options: [['none', 'None'], ['faint', 'Faint'], ['medium', 'Medium'], ['strong', 'Strong'], ['veryStrong', 'Very strong']] },
       ] },
     ],
@@ -373,28 +374,28 @@ const schema = [
       ] },
       { title: 'Prongs', when: (s) => !['bezel', 'halfBezel', 'tension'].includes(s.setting.style), controls: [
         { type: 'segmented', path: 'setting.prongs', label: 'Number', options: (s) => CUTS[s.stone.shape].prongs.options.filter((o) => o !== 'bezel').map((o) => [o, o === 'double' ? '4 double' : String(o)]) },
-        { type: 'segmented', path: 'setting.prongStyle', label: 'Tips', options: [['round', 'Rounded'], ['claw', 'Claw'], ['double', 'Double claw']], note: 'Points and sharp corners get V-tips automatically.' },
-        { type: 'slider', path: 'setting.prongSize', label: 'Thickness', min: 0.7, max: 1.5, step: 0.01, format: () => `${(current ? current.prongR * 2 : 1).toFixed(2)} mm` },
-        { type: 'segmented', path: 'setting.basket', label: 'Basket', options: [['single', 'One rail'], ['double', 'Two rails'], ['none', 'Open']] },
+        { adv: true, type: 'segmented', path: 'setting.prongStyle', label: 'Tips', options: [['round', 'Rounded'], ['claw', 'Claw'], ['double', 'Double claw']], note: 'Points and sharp corners get V-tips automatically.' },
+        { adv: true, type: 'slider', path: 'setting.prongSize', label: 'Thickness', min: 0.7, max: 1.5, step: 0.01, format: () => `${(current ? current.prongR * 2 : 1).toFixed(2)} mm` },
+        { adv: true, type: 'segmented', path: 'setting.basket', label: 'Basket', options: [['single', 'One rail'], ['double', 'Two rails'], ['none', 'Open']] },
       ] },
-      { title: 'Height', controls: [
+      { adv: true, title: 'Height', controls: [
         { type: 'slider', path: 'setting.height', label: 'Gap under the stone', min: 0.15, max: 3.2, step: 0.05, format: (v) => `${v.toFixed(2)} mm`, note: () => (current ? `The table sits ${current.built.stats.heightAboveFinger.toFixed(1)} mm above the finger.` : '') },
       ] },
       { title: 'Halo', when: (s) => ['halo', 'doubleHalo', 'hiddenHalo'].includes(s.setting.style), controls: [
         { type: 'slider', path: 'setting.haloSize', label: 'Halo stones', min: 0.8, max: 2.2, step: 0.05, format: (v) => `${v.toFixed(2)} mm` },
-        { type: 'slider', path: 'setting.haloGap', label: 'Gap to centre stone', when: (s) => s.setting.style !== 'hiddenHalo', min: 0, max: 0.8, step: 0.02, format: (v) => `${v.toFixed(2)} mm` },
-        { type: 'toggle', path: 'setting.milgrain', label: 'Milgrain edge', when: (s) => s.setting.style !== 'hiddenHalo' },
+        { adv: true, type: 'slider', path: 'setting.haloGap', label: 'Gap to centre stone', when: (s) => s.setting.style !== 'hiddenHalo', min: 0, max: 0.8, step: 0.02, format: (v) => `${v.toFixed(2)} mm` },
+        { adv: true, type: 'toggle', path: 'setting.milgrain', label: 'Milgrain edge', when: (s) => s.setting.style !== 'hiddenHalo' },
       ] },
       { title: 'Side stones', when: (s) => ['threeStone', 'fiveStone'].includes(s.setting.style), controls: [
         { type: 'shapes', path: 'setting.sideShape', label: 'Shape', options: () => shapeOptions((k) => ['round', 'oval', 'pear', 'princess', 'emerald', 'trillion', 'baguette', 'taperedBaguette', 'marquise', 'heart', 'cushion', 'radiant', 'asscher'].includes(k)) },
         { type: 'slider', path: 'setting.sideCarat', label: 'Each side stone', min: Math.sqrt(0.05), max: Math.sqrt(2), step: 0.001, map: { to: (v) => Math.sqrt(v), from: (x) => Math.round(x * x * 100) / 100 }, format: (v) => `${v.toFixed(2)} ct` },
-        { type: 'segmented', path: 'setting.sideType', label: 'Material', options: [['diamond', 'White diamonds'], ['match', 'Same as centre']] },
+        { adv: true, type: 'segmented', path: 'setting.sideType', label: 'Material', options: [['diamond', 'White diamonds'], ['match', 'Same as centre']] },
       ] },
       { title: 'Second stone', when: (s) => s.setting.style === 'toiEtMoi', controls: [
         { type: 'shapes', path: 'setting.secondShape', label: 'Shape', options: () => shapeOptions() },
         { type: 'slider', path: 'setting.secondCarat', label: 'Carat', min: Math.sqrt(0.2), max: Math.sqrt(5), step: 0.001, map: { to: (v) => Math.sqrt(v), from: (x) => Math.round(x * x * 100) / 100 }, format: (v) => `${v.toFixed(2)} ct` },
       ] },
-      { title: 'Head metal', hint: 'White prongs keep a colourless diamond looking white in a yellow or rose gold ring.', controls: [
+      { adv: true, title: 'Head metal', hint: 'White prongs keep a colourless diamond looking white in a yellow or rose gold ring.', controls: [
         { type: 'swatches', path: 'setting.headMetal', label: 'Prongs and head', options: () => metalOptions(true) },
       ] },
     ],
@@ -406,24 +407,24 @@ const schema = [
         { type: 'info', render: (s) => { const z = sizeSummary(s.band.size); return [kv('UK / AU', z.uk), kv('EU', String(z.eu)), kv('Japan', String(z.jp)), kv('Inside', `${z.diameter.toFixed(2)} mm`)]; } },
       ] },
       { title: 'Shape', controls: [
-        { type: 'segmented', path: 'band.profile', label: 'Profile', options: Object.entries(PROFILES).map(([k, v]) => [k, v.label.replace(' (court)', '')]) },
-        { type: 'segmented', path: 'band.shank', label: 'Shank', options: Object.entries(SHANKS).map(([k, v]) => [k, v.label.replace(' shank', '')]) },
+        { adv: true, type: 'segmented', path: 'band.profile', label: 'Profile', options: Object.entries(PROFILES).map(([k, v]) => [k, v.label.replace(' (court)', '')]) },
+        { adv: true, type: 'segmented', path: 'band.shank', label: 'Shank', options: Object.entries(SHANKS).map(([k, v]) => [k, v.label.replace(' shank', '')]) },
         { type: 'slider', path: 'band.width', label: 'Width', min: 1.2, max: 8, step: 0.1, format: fmtMm },
-        { type: 'slider', path: 'band.thickness', label: 'Thickness', min: 1.0, max: 3.0, step: 0.05, format: fmtMm },
+        { adv: true, type: 'slider', path: 'band.thickness', label: 'Thickness', min: 1.0, max: 3.0, step: 0.05, format: fmtMm },
       ] },
       { title: 'Stones on the band', controls: [
         { type: 'segmented', path: 'band.accent', label: 'Style', options: Object.entries(ACCENTS).map(([k, v]) => [k, v.label.replace(' (halfway)', '').replace(' all the way round', ' eternity')]) },
-        { type: 'slider', path: 'band.accentScale', label: 'Stone size', when: (s) => s.band.accent !== 'none', min: 0.7, max: 1.3, step: 0.01, format: () => (current && current.built.stats.accentCount ? `${current.built.stats.accentCount} stones` : '') },
-        { type: 'toggle', path: 'band.milgrain', label: 'Milgrain edges', when: (s) => ['plain', 'tapered'].includes(s.band.shank) },
+        { adv: true, type: 'slider', path: 'band.accentScale', label: 'Stone size', when: (s) => s.band.accent !== 'none', min: 0.7, max: 1.3, step: 0.01, format: () => (current && current.built.stats.accentCount ? `${current.built.stats.accentCount} stones` : '') },
+        { adv: true, type: 'toggle', path: 'band.milgrain', label: 'Milgrain edges', when: (s) => ['plain', 'tapered'].includes(s.band.shank) },
       ] },
       { title: 'Metal', controls: [
         { type: 'swatches', path: 'band.metal', label: 'Band metal', options: () => metalOptions(false) },
-        { type: 'segmented', path: 'band.finish', label: 'Finish', options: Object.entries(FINISHES).map(([k, f]) => [k, f.label.replace(' (brushed)', '').replace(' (sandblasted)', '')]) },
+        { adv: true, type: 'segmented', path: 'band.finish', label: 'Finish', options: Object.entries(FINISHES).map(([k, f]) => [k, f.label.replace(' (brushed)', '').replace(' (sandblasted)', '')]) },
       ] },
       { title: 'Wedding band', controls: [
         { type: 'segmented', path: 'wedding.style', label: 'Stack with', options: [['none', 'None'], ['plain', 'Plain'], ['pave', 'Pavé'], ['eternity', 'Eternity'], ['contour', 'Curved']] },
-        { type: 'slider', path: 'wedding.width', label: 'Width', when: (s) => s.wedding.style !== 'none', min: 1.2, max: 6, step: 0.1, format: fmtMm },
-        { type: 'swatches', path: 'wedding.metal', label: 'Metal', when: (s) => s.wedding.style !== 'none', options: () => metalOptions(true) },
+        { adv: true, type: 'slider', path: 'wedding.width', label: 'Width', when: (s) => s.wedding.style !== 'none', min: 1.2, max: 6, step: 0.1, format: fmtMm },
+        { adv: true, type: 'swatches', path: 'wedding.metal', label: 'Metal', when: (s) => s.wedding.style !== 'none', options: () => metalOptions(true) },
       ] },
     ],
   },
@@ -431,12 +432,12 @@ const schema = [
     id: 'light', label: 'Light', groups: [
       { title: 'Lighting', controls: [
         { type: 'select', path: 'light.preset', label: 'Lighting scene', options: Object.entries(LIGHT_PRESETS).map(([k, p]) => [k, p.label]) },
-        { type: 'slider', path: 'light.azimuth', label: 'Light direction', min: -180, max: 180, step: 1, format: (v) => (v === 0 ? 'As set' : `${v > 0 ? 'Turned right' : 'Turned left'} ${Math.abs(v)}°`) },
-        { type: 'slider', path: 'light.elevation', label: 'Light height', min: -45, max: 60, step: 1, format: (v) => (v === 0 ? 'As set' : `${v > 0 ? 'Higher' : 'Lower'} ${Math.abs(v)}°`) },
-        { type: 'slider', path: 'light.kelvin', label: 'Light colour', min: 1800, max: 9500, step: 50, format: (v) => `${v} K${v < 3200 ? ', warm' : v > 6500 ? ', cool' : ''}` },
-        { type: 'slider', path: 'light.exposure', label: 'Brightness', min: -2, max: 2, step: 0.05, format: (v) => `${v >= 0 ? '+' : ''}${v.toFixed(2)} EV` },
+        { adv: true, type: 'slider', path: 'light.azimuth', label: 'Light direction', min: -180, max: 180, step: 1, format: (v) => (v === 0 ? 'As set' : `${v > 0 ? 'Turned right' : 'Turned left'} ${Math.abs(v)}°`) },
+        { adv: true, type: 'slider', path: 'light.elevation', label: 'Light height', min: -45, max: 60, step: 1, format: (v) => (v === 0 ? 'As set' : `${v > 0 ? 'Higher' : 'Lower'} ${Math.abs(v)}°`) },
+        { adv: true, type: 'slider', path: 'light.kelvin', label: 'Light colour', min: 1800, max: 9500, step: 50, format: (v) => `${v} K${v < 3200 ? ', warm' : v > 6500 ? ', cool' : ''}` },
+        { adv: true, type: 'slider', path: 'light.exposure', label: 'Brightness', min: -2, max: 2, step: 0.05, format: (v) => `${v >= 0 ? '+' : ''}${v.toFixed(2)} EV` },
       ] },
-      { title: 'Camera look', controls: [
+      { adv: true, title: 'Camera look', controls: [
         { type: 'slider', path: 'light.bloom', label: 'Highlight glow', min: 0, max: 1, step: 0.01, format: (v) => `${Math.round(v * 100)}%` },
         { type: 'slider', path: 'light.glints', label: 'Star glints', min: 0, max: 1, step: 0.01, format: (v) => (v ? `${Math.round(v * 100)}%` : 'Off') },
         { type: 'slider', path: 'light.shadow', label: 'Shadow', min: 0, max: 1, step: 0.01, format: (v) => `${Math.round(v * 100)}%` },
@@ -452,14 +453,14 @@ const schema = [
         { type: 'buttons', items: [['Add hand photo', () => fileInput.click(), 'primary'], ['Find the finger again', () => { startPlacement(); autoPlace(); }, 'ghost', () => !photo], ['Place it by hand', () => startPlacement(), 'ghost', () => !photo]] },
         { type: 'info', render: () => photoTips() },
       ] },
-      { title: 'Fit to the finger', when: (s) => !!photo && placement.step === 2, controls: [
+      { adv: true, title: 'Fit to the finger', when: (s) => !!photo && placement.step === 2, controls: [
         { type: 'slider', path: 'photo.pitch', label: 'Finger tilt', min: -60, max: 60, step: 1, format: (v) => (v === 0 ? (placement.auto ? 'As detected' : 'Flat to the camera') : v > 0 ? `Tip toward camera ${v}°` : `Tip away ${-v}°`) },
         { type: 'slider', path: 'photo.roll', label: 'Finger turn', min: -80, max: 80, step: 1, format: (v) => (v === 0 ? (placement.auto ? 'As detected' : 'Facing the camera') : `${v > 0 ? 'Turned right' : 'Turned left'} ${Math.abs(v)}°`) },
         { type: 'slider', path: 'photo.slide', label: 'Along the finger', min: -8, max: 8, step: 0.1, format: (v) => (v === 0 ? 'Where you tapped' : `${v > 0 ? 'Toward fingertip' : 'Toward hand'} ${Math.abs(v).toFixed(1)} mm`) },
         { type: 'toggle', path: 'photo.together', label: 'Fingers touching (hides the sides of the band)' },
         { type: 'toggle', path: 'photo.snap', label: 'Snap the guides to finger edges' },
       ] },
-      { title: 'Blend with the photo', when: (s) => !!photo, controls: [
+      { adv: true, title: 'Blend with the photo', when: (s) => !!photo, controls: [
         { type: 'toggle', path: 'photo.match', label: 'Match the photo’s colour and brightness' },
         { type: 'toggle', path: 'photo.autoLight', label: 'Light the ring from the photo’s light direction' },
         { type: 'slider', path: 'photo.warmth', label: 'Warmth', min: -1, max: 1, step: 0.01, format: (v) => (Math.abs(v) < 0.02 ? 'Neutral' : v > 0 ? `Warmer ${Math.round(v * 100)}` : `Cooler ${Math.round(-v * 100)}`) },
@@ -486,6 +487,22 @@ function photoTips() {
 }
 
 const panel = new Panel($('#panel-controls'), schema, () => state, onChange);
+
+// Simple shows the choices most people make (shape, carat, colour, setting,
+// size, metal, lighting); All options shows every control.
+{
+  const row = el('div', { class: 'simple-switch segmented', role: 'radiogroup', 'aria-label': 'How many options to show' });
+  const opts = [[true, 'Simple'], [false, 'All options']];
+  const btns = opts.map(([v, label]) => {
+    const b = el('button', { type: 'button', role: 'radio', class: 'seg', text: label });
+    b.addEventListener('click', () => { state.ui.simple = v; persist(); sync(); panel.refresh(); });
+    row.append(b);
+    return [v, b];
+  });
+  const sync = () => btns.forEach(([v, b]) => b.setAttribute('aria-checked', String(state.ui.simple === v)));
+  sync();
+  $('#panel-controls').before(row);
+}
 try { const t = localStorage.getItem('ers.tab'); if (t) panel.select(t); } catch (e) { /* storage unavailable */ }
 
 // ---------------------------------------------------------------------------
@@ -600,10 +617,13 @@ async function decode(file) {
   }
 }
 
+const HEIC_HELP = 'This is an iPhone HEIC photo, which this browser can’t open. Open the site in Safari, or on the iPhone choose Settings → Camera → Formats → Most Compatible and retake it, or send it to yourself as a JPEG.';
+const isHeic = (file) => /hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name || '');
+
 async function loadPhoto(file) {
   let src;
   try { src = await decode(file); } catch (e) {
-    toast('That file could not be opened. Try a JPG or PNG.');
+    toast(isHeic(file) ? HEIC_HELP : 'That file could not be opened. Try a JPG or PNG.');
     return;
   }
   const iw = src.width || src.naturalWidth, ih = src.height || src.naturalHeight;
@@ -670,6 +690,10 @@ async function autoPlace() {
   const [dx, dy] = fingertipDir();
   if (dx * found.tip[0] + dy * found.tip[1] < 0) placement.flip = true;
   state.photo.pitch = 0; state.photo.roll = 0; state.photo.slide = 0;
+  // fingers pressed against the ring finger hide the band's sides
+  const nb = found.neighbours || {};
+  state.photo.together = !!(nb.plus || nb.minus);
+  engine.setFingersTogether(state.photo.together ? nb : false);
   if (state.photo.autoLight) applyPhotoLight(found.light);
   showGuides = false;
   $('#toggle-guides')?.setAttribute('aria-pressed', 'false');
@@ -678,7 +702,8 @@ async function autoPlace() {
   panel.refresh();
   // frame the ring
   const cx = (found.a[0] + found.b[0]) / 2 / photo.w, cy = (found.a[1] + found.b[1]) / 2 / photo.h;
-  const z = Math.min(2.2, Math.max(1, (photo.w / Math.hypot(found.b[0] - found.a[0], found.b[1] - found.a[1])) / 7));
+  // close enough that the stone gets real pixels: the finger spans about a fifth of the view
+  const z = Math.min(4, Math.max(1, (photo.w * 0.2) / Math.hypot(found.b[0] - found.a[0], found.b[1] - found.a[1])));
   engine.setView(z, cx, cy);
   toast('Ring placed on the ring finger. Turn on Guides to fine-tune.');
 }
@@ -1004,7 +1029,7 @@ function toast(msg) {
   t.textContent = msg;
   t.hidden = false;
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => { t.hidden = true; }, 3200);
+  toast.timer = setTimeout(() => { t.hidden = true; }, Math.max(3200, msg.length * 55));
 }
 
 let downloads = null;
