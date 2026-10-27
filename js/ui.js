@@ -86,13 +86,16 @@ export class Panel {
     const box = el('section', { class: 'group' });
     if (group.title) box.append(el('h3', { class: 'group-title', text: group.title }));
     if (group.hint) box.append(el('p', { class: 'group-hint', text: group.hint }));
-    for (const c of group.controls) box.append(this.buildControl(c, group.when));
-    this.controls.push({ when: group.when, node: box, update: () => {} });
+    // advanced groups and controls hide in simple mode (state.ui.simple)
+    const groupWhen = group.adv ? (s) => !(s.ui && s.ui.simple) && (!group.when || group.when(s)) : group.when;
+    for (const c of group.controls) box.append(this.buildControl(c, groupWhen));
+    this.controls.push({ when: groupWhen, node: box, update: () => {} });
     return box;
   }
 
   buildControl(c, groupWhen) {
-    const when = groupWhen && c.when ? (s) => groupWhen(s) && c.when(s) : groupWhen || c.when;
+    let when = groupWhen && c.when ? (s) => groupWhen(s) && c.when(s) : groupWhen || c.when;
+    if (c.adv) { const w = when; when = (s) => !(s.ui && s.ui.simple) && (!w || w(s)); }
     const maker = MAKERS[c.type];
     const ctl = maker(c, this);
     const wrap = el('div', { class: `field field-${c.type}` });

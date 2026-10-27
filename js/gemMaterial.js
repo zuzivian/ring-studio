@@ -38,6 +38,7 @@ uniform samplerCube envMap;
 uniform float envIntensity;
 uniform vec4 planes[ NUM_PLANES ];
 uniform float iors[ NUM_SAMPLES ];
+uniform float iorStep;
 uniform vec3 wts[ NUM_SAMPLES ];
 uniform vec3 absorb;
 uniform vec4 incl[ 8 ];
@@ -73,6 +74,9 @@ void main() {
   vec3 V = normalize( vLocalPos - vLocalCam );
   float cosi = clamp( - dot( V, N ), 0.0, 1.0 );
   vec3 color = vec3( 0.0 );
+  // shift every wavelength sample by a per-pixel fraction of a band, so the
+  // fire blends into a continuous spectrum instead of a few coloured fringes
+  float jitter = fract( sin( dot( gl_FragCoord.xy, vec2( 12.9898, 78.233 ) ) ) * 43758.5453 ) - 0.5;
 
   // light actually in the room, for what inclusions and haze scatter toward us:
   // the cube averaged over six directions, weighted toward the sky, so a hazy
@@ -83,7 +87,7 @@ void main() {
   room = min( room, vec3( 1.5 ) );
 
   for ( int s = 0; s < NUM_SAMPLES; s ++ ) {
-    float n = iors[ s ];
+    float n = iors[ s ] + jitter * iorStep;
     float F = fresnel( cosi, 1.0 / n );
     vec3 acc = envLookup( reflect( V, N ) ) * F;
     vec3 dir = refract( V, N, 1.0 / n );
@@ -206,6 +210,7 @@ export function createGemMaterial(gem, { samples = 5, bounces = 8, instanced = f
       envIntensity: { value: 1 },
       planes: { value: planes },
       iors: { value: bands.map(() => 2.417) },
+      iorStep: { value: 0 },
       wts: { value: bands.map((b) => new THREE.Vector3(...b.rgb)) },
       absorb: { value: new THREE.Vector3() },
       incl: { value: Array.from({ length: 8 }, () => new THREE.Vector4()) },
@@ -227,6 +232,7 @@ export function applyOptics(mat, optics) {
   const u = mat.uniforms;
   const bands = mat.userData.bands;
   u.iors.value = bands.map((b) => iorAt(optics.ior, optics.dispersion, b.lambda));
+  u.iorStep.value = bands.length > 1 ? Math.abs(u.iors.value[0] - u.iors.value[bands.length - 1]) / (bands.length - 1) : 0;
   u.absorb.value.set(...optics.absorb);
   u.haze.value = optics.haze || 0;
   const list = (optics.inclusions && optics.inclusions.list) || [];

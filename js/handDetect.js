@@ -7,8 +7,19 @@
 // x, y with z a relative depth (smaller = nearer the camera).
 
 const MP_VERSION = '0.10.14';
-const MP_BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}`;
-const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
+const CDN_BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}`;
+const CDN_MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
+// Self-hosted copy (scripts/fetch-mediapipe.sh fills it). Used when present:
+// it loads faster and works on networks that block the CDNs.
+const LOCAL_BASE = new URL('../vendor/mediapipe/', import.meta.url).href;
+
+async function sources() {
+  try {
+    const r = await fetch(LOCAL_BASE + 'hand_landmarker.task', { method: 'HEAD' });
+    if (r.ok) return { bundle: LOCAL_BASE + 'vision_bundle.mjs', wasm: LOCAL_BASE + 'wasm', model: LOCAL_BASE + 'hand_landmarker.task' };
+  } catch (e) { /* not self-hosted */ }
+  return { bundle: `${CDN_BASE}/vision_bundle.mjs`, wasm: `${CDN_BASE}/wasm`, model: CDN_MODEL };
+}
 
 // where along the ring finger's first bone the ring sits (0 = knuckle, 1 = middle joint)
 const RING_T = 0.47;
@@ -18,10 +29,11 @@ let landmarkerPromise = null;
 export function loadHandLandmarker() {
   if (landmarkerPromise) return landmarkerPromise;
   landmarkerPromise = (async () => {
-    const { FilesetResolver, HandLandmarker } = await import(/* @vite-ignore */ `${MP_BASE}/vision_bundle.mjs`);
-    const fileset = await FilesetResolver.forVisionTasks(`${MP_BASE}/wasm`);
+    const src = await sources();
+    const { FilesetResolver, HandLandmarker } = await import(/* @vite-ignore */ src.bundle);
+    const fileset = await FilesetResolver.forVisionTasks(src.wasm);
     const make = (delegate) => HandLandmarker.createFromOptions(fileset, {
-      baseOptions: { modelAssetPath: MODEL_URL, delegate },
+      baseOptions: { modelAssetPath: src.model, delegate },
       runningMode: 'IMAGE',
       numHands: 2,
       minHandDetectionConfidence: 0.35,
@@ -101,8 +113,18 @@ export async function detectRingFinger(photo) {
   const lean = Math.hypot(up[0], up[1]);
   if (lean > Math.SQRT1_2) { const k = Math.SQRT1_2 / lean; up = norm([up[0] * k, up[1] * k, Math.SQRT1_2]); }
 
+  // fingers touching the ring finger hide the band's sides. Measure how far
+  // the middle and little fingers sit from it at the ring's height, on the
+  // side of the ring's +X axis (image direction (px, py)) and the other side.
+  const neighbours = { plus: false, minus: false };
+  for (const [mcp, pip] of [[9, 10], [17, 18]]) {
+    const q = [P[mcp][0] + (P[pip][0] - P[mcp][0]) * RING_T, P[mcp][1] + (P[pip][1] - P[mcp][1]) * RING_T];
+    const across = (q[0] - cc[0]) * px + (q[1] - cc[1]) * py;
+    if (Math.abs(across) < w * 1.22) neighbours[across > 0 ? 'plus' : 'minus'] = true;
+  }
+
   return {
-    a, b, tip: [tx, ty], fz, up,
+    a, b, tip: [tx, ty], fz, up, neighbours,
     widthSource: edges ? 'edges' : 'knuckles',
     light: estimateLight(photo, P, w),
     points: P,

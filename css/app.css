@@ -148,6 +148,8 @@ button, input, select { font: inherit; color: inherit; }
 .chip { flex: none; border: 1px solid var(--edge); background: var(--field); border-radius: 999px; padding: 5px 11px; font-size: 13px; cursor: pointer; white-space: nowrap; }
 .chip:hover { border-color: var(--accent); }
 
+.simple-switch { margin: 4px 18px 10px; }
+.simple-switch .seg { flex: 1; }
 .tabs { position: sticky; top: 0; z-index: 2; display: flex; background: var(--panel); border-bottom: 1px solid var(--line); padding: 0 10px; }
 .tab { flex: 1; min-height: 44px; border: 0; background: transparent; padding: 12px 4px 10px; cursor: pointer; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }

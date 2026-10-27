@@ -202,7 +202,8 @@ export class Engine {
     this.look = { exposure: 1, tint: [1, 1, 1], softness: 0, grain: 0, bloom: 0.35, glints: 0, saturation: 1, shadow: 0.45, ao: 0.4 };
     this.view = { zoom: 1, cx: 0.5, cy: 0.5 };
     this.backdrop = 'light';
-    this.quality = { pixelRatio: Math.min(window.devicePixelRatio || 1, 2) };
+    // phones are 3x: render at full density so small stones keep their facets
+    this.quality = { pixelRatio: Math.min(window.devicePixelRatio || 1, 3) };
 
     // environment
     this.env = new Environment(this.scene);
@@ -393,8 +394,11 @@ export class Engine {
     occ.layers.set(L.OCCLUDER);
     occ.renderOrder = -3;
     this.finger.add(occ);
-    if (this.fingersTogether) {
-      for (const sgn of [-1, 1]) {
+    // true = both sides, or { plus, minus } for the fingers on each side of the ring's X axis
+    const ft = this.fingersTogether;
+    const sides = ft === true ? [-1, 1] : ft ? [ft.minus && -1, ft.plus && 1].filter(Boolean) : [];
+    if (sides.length) {
+      for (const sgn of sides) {
         const n = new THREE.Mesh(mkCyl(R * 0.95, sgn * R * 2.02), occMat);
         n.layers.set(L.OCCLUDER);
         n.renderOrder = -3;
@@ -406,8 +410,8 @@ export class Engine {
     const skin = new THREE.Mesh(mkCyl(R * 0.99), this.skinMat);
     skin.layers.set(L.SKIN);
     this.finger.add(skin);
-    if (this.fingersTogether) {
-      for (const sgn of [-1, 1]) {
+    if (sides.length) {
+      for (const sgn of sides) {
         const n = new THREE.Mesh(mkCyl(R * 0.95, sgn * R * 2.02), this.skinMat);
         n.layers.set(L.SKIN);
         this.finger.add(n);
