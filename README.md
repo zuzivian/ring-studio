@@ -31,10 +31,6 @@ No build step, no server, no upload: open `index.html` from any static host. The
 - `js/engine.js` renders in passes (reflection cubes → ring → photo with contact shadow → composite with tone mapping, bloom and film match) using three.js r170 from jsDelivr.
 - `js/main.js` and `js/ui.js` hold the state, the control schema and the placement interaction.
 
-## Self-hosting hand detection
-
-By default the hand landmarker loads from jsDelivr and Google's model host. To serve it from this site instead (faster, and it works on networks that block those hosts), run `scripts/fetch-mediapipe.sh` once from the repo root and commit `vendor/mediapipe/` (about 25 MB). The app uses the local copy whenever it is present.
-
 ## Running locally
 
 Any static file server works, for example `python3 -m http.server` in the repo folder, then open `http://localhost:8000/`. ES modules will not load from `file://`.
