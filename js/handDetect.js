@@ -9,18 +9,6 @@
 const MP_VERSION = '0.10.14';
 const CDN_BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}`;
 const CDN_MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
-// Self-hosted copy (scripts/fetch-mediapipe.sh fills it). Used when present:
-// it loads faster and works on networks that block the CDNs.
-const LOCAL_BASE = new URL('../vendor/mediapipe/', import.meta.url).href;
-
-async function sources() {
-  try {
-    const r = await fetch(LOCAL_BASE + 'hand_landmarker.task', { method: 'HEAD' });
-    if (r.ok) return { bundle: LOCAL_BASE + 'vision_bundle.mjs', wasm: LOCAL_BASE + 'wasm', model: LOCAL_BASE + 'hand_landmarker.task' };
-  } catch (e) { /* not self-hosted */ }
-  return { bundle: `${CDN_BASE}/vision_bundle.mjs`, wasm: `${CDN_BASE}/wasm`, model: CDN_MODEL };
-}
-
 // where along the ring finger's first bone the ring sits (0 = knuckle, 1 = middle joint)
 const RING_T = 0.47;
 
@@ -29,11 +17,10 @@ let landmarkerPromise = null;
 export function loadHandLandmarker() {
   if (landmarkerPromise) return landmarkerPromise;
   landmarkerPromise = (async () => {
-    const src = await sources();
-    const { FilesetResolver, HandLandmarker } = await import(/* @vite-ignore */ src.bundle);
-    const fileset = await FilesetResolver.forVisionTasks(src.wasm);
+    const { FilesetResolver, HandLandmarker } = await import(/* @vite-ignore */ `${CDN_BASE}/vision_bundle.mjs`);
+    const fileset = await FilesetResolver.forVisionTasks(`${CDN_BASE}/wasm`);
     const make = (delegate) => HandLandmarker.createFromOptions(fileset, {
-      baseOptions: { modelAssetPath: src.model, delegate },
+      baseOptions: { modelAssetPath: CDN_MODEL, delegate },
       runningMode: 'IMAGE',
       numHands: 2,
       minHandDetectionConfidence: 0.35,
