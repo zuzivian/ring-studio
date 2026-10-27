@@ -33,8 +33,8 @@ const DEFAULTS = {
   },
   band: { size: 6, width: 2.0, thickness: 1.6, profile: 'domed', shank: 'plain', accent: 'none', accentScale: 1, milgrain: false, metal: 'platinum', finish: 'polished' },
   wedding: { style: 'none', width: 2.0, metal: 'match' },
-  light: { preset: 'studio', azimuth: 0, elevation: 0, exposure: 0, kelvin: 5500, bloom: 0.35, glints: 0, shadow: 0.45, quality: 'balanced', rock: false, backdrop: 'light' },
-  photo: { pitch: 0, roll: 0, slide: 0, together: false, snap: true, match: true, autoLight: true, softness: 0.6, grain: 0.15, photoMix: 0.4, warmth: 0 },
+  light: { preset: 'studio', azimuth: 0, elevation: 0, exposure: 0, kelvin: 5500, bloom: 0.22, glints: 0, shadow: 0.45, quality: 'balanced', rock: false, backdrop: 'light' },
+  photo: { pitch: 0, roll: 0, slide: 0, together: false, snap: true, match: true, autoLight: true, softness: 0.4, grain: 0.15, photoMix: 0.25, warmth: 0 },
 };
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -781,7 +781,9 @@ function sampleSkin() {
     const lum = 0.2126 * avg[0] + 0.7152 * avg[1] + 0.0722 * avg[2] || 1;
     // a gentle nudge toward the photo: the ring is lit by its own light box, so
     // only the colour cast and a little of the brightness are borrowed
-    const cast = avg.map((v) => Math.pow(v / lum, 0.45));
+    // a whole-frame average is pulled by skin and backdrops (purple sheets,
+    // teal blankets), so only a small, capped share of it reaches the ring
+    const cast = avg.map((v) => Math.min(1.08, Math.max(0.93, Math.pow(v / lum, 0.2))));
     photo.match = { tint: cast, exposure: Math.min(1.12, Math.max(0.72, Math.pow(L / 0.3, 0.3))) };
   }
   applyLook();

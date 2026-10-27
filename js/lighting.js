@@ -131,7 +131,12 @@ export const LIGHT_PRESETS = {
   match: {
     label: 'Soft room light (photo colours)', kelvin: 5600, sky: [0.5, 0.45, 0.25], uv: 0.3, fromPhoto: true,
     key: [0, 0.85, 0.5], shadow: 0.38, shadowRadius: 8,
-    emitters: [rect([0, 1, 0.4], 70, 50, 2.2), rect([0, 0.1, 1], 60, 25, 0.7), observer(0.03)],
+    emitters: [
+      rect([0, 1, 0.4], 64, 44, 2.4), rect([0, 0.1, 1], 56, 22, 0.6), observer(0.02),
+      // dark surroundings and a few small lamps give the facets contrast and sparkle
+      rect([-1, 0.15, 0.15], 26, 80, 0.015), rect([1, 0.15, 0.15], 26, 80, 0.015), rect([0, 0.3, -1], 60, 28, 0.02),
+      disc([-0.4, 0.75, 0.55], 2.2, 90), disc([0.5, 0.6, 0.6], 1.8, 80), disc([0.1, 0.9, -0.3], 1.6, 60),
+    ],
   },
 };
 
@@ -249,7 +254,10 @@ export class Environment {
     let [z, h, gr] = p.sky;
     const u = this.skyMat.uniforms;
     if (p.fromPhoto && opts.photoColor) {
-      const pc = opts.photoColor;
+      // the photo's colour, mostly desaturated: enough to sit in the scene,
+      // not so much that a coloured backdrop stains the metal
+      const lumPc = 0.2126 * opts.photoColor[0] + 0.7152 * opts.photoColor[1] + 0.0722 * opts.photoColor[2];
+      const pc = opts.photoColor.map((v) => (lumPc + (v - lumPc) * 0.3) / Math.max(0.05, lumPc) * 0.5);
       u.zenith.value.setRGB(pc[0] * z * 1.6, pc[1] * z * 1.6, pc[2] * z * 1.6);
       u.horizon.value.setRGB(pc[0] * h * 1.4, pc[1] * h * 1.4, pc[2] * h * 1.4);
       u.ground.value.setRGB(pc[0] * gr, pc[1] * gr, pc[2] * gr);

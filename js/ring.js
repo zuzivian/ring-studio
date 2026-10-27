@@ -289,14 +289,20 @@ function prongLayout(cut, count, gem) {
       return at([90 - 38, 90 + 38, 270 - 38, 270 + 38]);
     case 'cushion': case 'elongatedCushion': case 'oldMine':
       if (count === 'double') return at([cornerDeg - 9, cornerDeg + 9, 180 - cornerDeg - 9, 180 - cornerDeg + 9, 180 + cornerDeg - 9, 180 + cornerDeg + 9, 360 - cornerDeg - 9, 360 - cornerDeg + 9], 'claw');
+      // six: the four corners plus the middle of each long side
+      if (count === 6) return at([cornerDeg, 180 - cornerDeg, 180 + cornerDeg, 360 - cornerDeg, 0, 180]);
       return at([cornerDeg, 180 - cornerDeg, 180 + cornerDeg, 360 - cornerDeg]);
-    case 'princess': return at([cornerDeg, 180 - cornerDeg, 180 + cornerDeg, 360 - cornerDeg], 'v');
+    case 'princess':
+      if (count === 6) return at([cornerDeg, 180 - cornerDeg, 180 + cornerDeg, 360 - cornerDeg], 'v').concat(at([0, 180]));
+      return at([cornerDeg, 180 - cornerDeg, 180 + cornerDeg, 360 - cornerDeg], 'v');
     case 'radiant': case 'emerald': case 'asscher': case 'baguette': case 'taperedBaguette':
       if (count === 'double') return at([cornerDeg - 7, cornerDeg + 7, 180 - cornerDeg - 7, 180 - cornerDeg + 7, 180 + cornerDeg - 7, 180 + cornerDeg + 7, 360 - cornerDeg - 7, 360 - cornerDeg + 7], 'claw');
+      if (count === 6) return at([cornerDeg, 180 - cornerDeg, 180 + cornerDeg, 360 - cornerDeg], 'claw').concat(at([0, 180]));
       return at([cornerDeg, 180 - cornerDeg, 180 + cornerDeg, 360 - cornerDeg], cut === 'baguette' || cut === 'taperedBaguette' ? 'v' : 'claw');
     case 'pear': {
       const tip = [{ u: 0, kind: 'v' }];
       if (count === 3) return tip.concat(at([270 - 55, 270 + 55]));
+      if (count === 6) return tip.concat(at([270 - 85, 270 - 40, 270, 270 + 40, 270 + 85]));
       return tip.concat(at([270 - 78, 270 - 28, 270 + 28, 270 + 78]));
     }
     case 'marquise': {
@@ -307,6 +313,7 @@ function prongLayout(cut, count, gem) {
     case 'heart': {
       const point = { u: o.uAtAngle(-Math.PI / 2), kind: 'v' };
       if (count === 5) return [point].concat(at([40, 140, 205, 335]));
+      if (count === 6) return [point].concat(at([40, 140, 205, 335, 90]));
       return [point].concat(at([38, 142]));
     }
     case 'trillion': return at([90, 210, 330], 'v');
@@ -594,19 +601,35 @@ export function buildRing(spec) {
     const a = Math.abs(((phi + Math.PI) % TAU + TAU) % TAU - Math.PI);
     let w = W;
     if (shank === 'tapered') w = W * (1 - 0.38 * smooth(1.25, 0.12, a));
-    if (cathedral) w *= 1 - 0.12 * smooth(1.1, headSideAngle, a);
+    if (cathedral) w *= 1 - 0.18 * smooth(1.2, headSideAngle, a);
     return w;
   };
   const thickAt = (phi) => {
     const a = Math.abs(((phi + Math.PI) % TAU + TAU) % TAU - Math.PI);
     let t = style === 'tension' ? tensionT : T;
     if (shank === 'tapered') t *= 1 - 0.1 * smooth(1.25, 0.12, a);
-    if (cathedral) {
-      const up = a > headSideAngle ? smooth(1.15, headSideAngle, a) : Math.pow(smooth(0, headSideAngle, a), 2);
-      t += rise * up;
-    }
     return t;
   };
+  // cathedral: two slim arches each side spring from the top of the shank and
+  // sweep up to hold the basket, leaving an open arch under the head
+  if (cathedral) {
+    const r = clamp(W * 0.21, 0.34, 0.62);
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        const zBand = sz * (widthAt(headSideAngle + 0.6) / 2 - r * 0.9);
+        const zHead = sz * clamp(cHalf.z * 0.42, Math.abs(zBand) * 0.9, cHalf.z * 0.7);
+        const onBand = (phi, lift = 0) => { const rho = Ri + T - r * 0.6 + lift; return new THREE.Vector3(sx * rho * Math.sin(phi), rho * Math.cos(phi), zBand); };
+        // starts buried in the shank so the arch grows out of it
+        const p0 = onBand(headSideAngle + 0.46, -r * 1.3);
+        const p1 = onBand(headSideAngle + 0.3, -r * 0.1);
+        const p2 = onBand(headSideAngle + 0.1, rise * 0.5);
+        p2.z = (zBand + zHead) / 2;
+        const p3 = new THREE.Vector3(sx * railOut * 1.02, railY - rise * 0.12, zHead * 0.98);
+        const p4 = new THREE.Vector3(sx * railOut * 0.92, railY + 0.05, zHead);
+        bandParts.push(tube([p0, p1, p2, p3, p4], (t) => r * (1 - 0.25 * t), { segments: 40, radial: 12, capEnd: true }));
+      }
+    }
+  }
   const sectionAt = (phi, w = widthAt(phi), t = thickAt(phi), zc = 0) => bandSection(profile, w, t).map(([a, z]) => [Ri + a, z + zc]);
 
   const rows = []; // accent rows: { phiFn ranges, z(φ), top(φ), width(φ) }
